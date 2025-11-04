@@ -1,7 +1,7 @@
 """SQLModel models for Loopy."""
 
 from sqlmodel import SQLModel, Field, create_engine, Session
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 from enum import Enum
 import os
