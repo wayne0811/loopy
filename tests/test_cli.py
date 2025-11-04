@@ -2,8 +2,6 @@
 
 import pytest
 import tempfile
-import os
-from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 from loopy.cli import main
 
