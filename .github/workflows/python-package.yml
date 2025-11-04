@@ -36,5 +36,7 @@ jobs:
       with:
         args: check
     - run: ruff format
-    - run: uv pip install --extra dev -r pyproject.toml
-    - run: uv run pytest
+    - name: pytest
+      run: |
+        uv sync
+        uv run pytest
