@@ -1,9 +1,22 @@
 """CLI interface for Loopy."""
 
 import sys
+import signal
+import logging
 import click
 from .loop import Loop
 from .models import ItemStatus
+
+logging.basicConfig()
+
+
+def handler(signum, frame):
+    match signum:
+        case signal.SIGTERM:
+            sys.exit(1)
+
+
+signal.signal(signal.SIGTERM, handler)
 
 
 @click.group(invoke_without_command=True)

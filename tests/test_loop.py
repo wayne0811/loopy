@@ -15,6 +15,7 @@ run_kwargs = {
     "stderr": subprocess.STDOUT,
     "text": True,
     "universal_newlines": True,
+    "start_new_session": True,
 }
 
 
