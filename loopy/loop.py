@@ -1,6 +1,8 @@
 """Loop class for executing commands."""
 
 import subprocess
+import signal
+from os import killpg
 from typing import List, Optional
 from sqlmodel import Session, select
 from .models import LoopModel, LoopItem, ItemStatus, get_session
@@ -92,6 +94,7 @@ class Loop:
                     stderr=subprocess.STDOUT,
                     text=True,
                     universal_newlines=True,
+                    start_new_session=True,
                 )
 
                 # Stream output in real-time
@@ -102,16 +105,17 @@ class Loop:
 
                 if process.returncode == 0:
                     item_model.status = ItemStatus.SUCCESS
+                    self.session.commit()
                 else:
                     item_model.status = ItemStatus.FAILED
                     item_model.attempts += 1
                     item_model.last_error = (
                         f"Command failed with exit code {process.returncode}"
                     )
+                    self.session.commit()
                     success = False
 
                     if not continue_on_failure:
-                        self.session.commit()
                         break
 
             except subprocess.TimeoutExpired:
@@ -122,14 +126,17 @@ class Loop:
                 item_model.status = ItemStatus.FAILED
                 item_model.attempts += 1
                 item_model.last_error = error_msg
+                self.session.commit()
                 print(f"{item_model.item}: {error_msg}")
                 success = False
 
                 if not continue_on_failure:
-                    self.session.commit()
                     break
 
-        self.session.commit()
+            except (KeyboardInterrupt, SystemExit):
+                killpg(process.pid, signal.SIGTERM)
+                raise
+
         return success
 
     def reset(self):
