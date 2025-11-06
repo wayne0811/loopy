@@ -73,11 +73,9 @@ class Loop:
         if not loop_model:
             raise ValueError(f"Loop {self.loop_id} not found")
 
-        pending_items = self.session.exec(
-            select(LoopItem).where(
-                LoopItem.loop_id == self.loop_id, LoopItem.status == ItemStatus.PENDING
-            )
-        ).all()
+        pending_items = [
+            item for item in loop_model.items if item.status == ItemStatus.PENDING
+        ]
 
         if not pending_items:
             print(f"No pending items for loop {self.loop_id}")
@@ -141,13 +139,11 @@ class Loop:
 
     def reset(self):
         """Reset loop to start from beginning."""
-        if not self.exists():
+        loop_model = self.session.get(LoopModel, self.loop_id)
+        if not loop_model:
             raise ValueError(f"Loop {self.loop_id} not found")
 
-        items = self.session.exec(
-            select(LoopItem).where(LoopItem.loop_id == self.loop_id)
-        ).all()
-        for item in items:
+        for item in loop_model.items:
             item.status = ItemStatus.PENDING
             item.attempts = 0
             item.last_error = None
@@ -160,13 +156,7 @@ class Loop:
         if not loop_model:
             raise ValueError(f"Loop {self.loop_id} not found")
 
-        # Delete items first
-        items = self.session.exec(
-            select(LoopItem).where(LoopItem.loop_id == self.loop_id)
-        ).all()
-        for item in items:
-            self.session.delete(item)
-
+        # Items will be cascade deleted automatically
         self.session.delete(loop_model)
         self.session.commit()
 
@@ -195,10 +185,7 @@ class Loop:
         self.session.add(new_loop)
 
         # Copy items
-        items = self.session.exec(
-            select(LoopItem).where(LoopItem.loop_id == self.loop_id)
-        ).all()
-        for item in items:
+        for item in loop_model.items:
             new_item = LoopItem(
                 loop_id=target_id,
                 item=item.item,
@@ -219,11 +206,12 @@ class Loop:
 
     def replace_items(self, items: List[str]):
         """Replace all items in loop."""
+        loop_model = self.session.get(LoopModel, self.loop_id)
+        if not loop_model:
+            raise ValueError(f"Loop {self.loop_id} not found")
+
         # Delete existing items
-        existing_items = self.session.exec(
-            select(LoopItem).where(LoopItem.loop_id == self.loop_id)
-        ).all()
-        for item in existing_items:
+        for item in loop_model.items:
             self.session.delete(item)
 
         # Add new items
@@ -235,17 +223,18 @@ class Loop:
 
     def list_items(self):
         """List items in the loop."""
-        items = self.session.exec(
-            select(LoopItem).where(LoopItem.loop_id == self.loop_id)
-        ).all()
-        return [(item.item, item.status, item.attempts) for item in items]
+        loop_model = self.session.get(LoopModel, self.loop_id)
+        if not loop_model:
+            return []
+        return [(item.item, item.status, item.attempts) for item in loop_model.items]
 
     def get_progress(self):
         """Get loop progress statistics."""
-        items = self.session.exec(
-            select(LoopItem).where(LoopItem.loop_id == self.loop_id)
-        ).all()
+        loop_model = self.session.get(LoopModel, self.loop_id)
+        if not loop_model:
+            return 0, 0, 0, 0
 
+        items = loop_model.items
         pending = sum(1 for item in items if item.status == ItemStatus.PENDING)
         failed = sum(1 for item in items if item.status == ItemStatus.FAILED)
         done = sum(1 for item in items if item.status == ItemStatus.SUCCESS)
