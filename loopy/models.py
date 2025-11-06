@@ -1,7 +1,7 @@
 """SQLModel models for Loopy."""
 
-from sqlmodel import SQLModel, Field, create_engine, Session
-from typing import Optional
+from sqlmodel import SQLModel, Field, create_engine, Session, Relationship
+from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 import os
@@ -18,11 +18,13 @@ class LoopItem(SQLModel, table=True):
     __tablename__ = "loop_items"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    loop_id: str = Field(foreign_key="loops.id")
+    loop_id: str = Field(foreign_key="loops.id", ondelete="CASCADE")
     item: str
     status: ItemStatus = Field(default=ItemStatus.PENDING)
     attempts: int = Field(default=0)
     last_error: Optional[str] = Field(default=None)
+
+    loop: Optional["LoopModel"] = Relationship(back_populates="items")
 
 
 class LoopModel(SQLModel, table=True):
@@ -32,6 +34,8 @@ class LoopModel(SQLModel, table=True):
     command: str
     created_at: datetime = Field(default_factory=datetime.now)
     status: str = Field(default="active")
+
+    items: List["LoopItem"] = Relationship(back_populates="loop", cascade_delete=True)
 
 
 def get_engine(db_path=None):
