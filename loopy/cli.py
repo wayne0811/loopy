@@ -19,7 +19,7 @@ def handler(signum, frame):
 signal.signal(signal.SIGTERM, handler)
 
 
-@click.group(invoke_without_command=True)
+@click.group(invoke_without_command=True, context_settings={"show_default": True})
 @click.option("--id", "loop_id", envvar="LOOPY_ID", help="Loop identifier")
 @click.option("--db", "db_path", envvar="LOOPY_DB", help="Database path")
 @click.pass_context
