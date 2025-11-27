@@ -72,9 +72,9 @@ def create(ctx, command):
     """Create a new loop."""
     loop_id = ctx.obj["loop_id"]
 
-    if "{}" not in command:
-        command = list(command) + ["{}"]
     cmd_str = " ".join(command)
+    if "{}" not in cmd_str:
+        cmd_str += " {}"
 
     # Read items from stdin
     click.echo("Reading items from standard input", err=True)
@@ -90,15 +90,18 @@ def create(ctx, command):
 
 @main.command()
 @click.option(
-    "--continue-on-failure", is_flag=True, help="Continue processing even if items fail"
+    "--continue-on-failure", is_flag=True, default=False, help="Continue processing even if items fail"
+)
+@click.option(
+    "--include-failed", default=False, help="Re-run failed items"
 )
 @click.pass_context
-def run(ctx, continue_on_failure):
+def run(ctx, continue_on_failure, include_failed):
     """Run an existing loop."""
     loop_id = ctx.obj["loop_id"]
 
     loop = Loop(loop_id, db_path=ctx.obj["db_path"])
-    success = loop.run(continue_on_failure)
+    success = loop.run(continue_on_failure, include_failed)
     sys.exit(0 if success else 1)
 
 
@@ -131,9 +134,10 @@ def cmd(ctx, command):
     """Update loop command."""
     loop_id = ctx.obj["loop_id"]
 
-    if "{}" not in command:
-        command = list(command) + ["{}"]
+
     cmd_str = " ".join(command)
+    if "{}" not in cmd_str:
+        cmd_str += " {}"
     loop = Loop(loop_id, db_path=ctx.obj["db_path"])
     loop.update_command(cmd_str)
     click.echo(f"Loop {loop_id} command updated")

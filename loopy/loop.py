@@ -67,14 +67,15 @@ class Loop:
         """Check if loop exists."""
         return self.session.get(LoopModel, self.loop_id) is not None
 
-    def run(self, continue_on_failure: bool = False, timeout: Optional[int] = None):
+    def run(self, continue_on_failure: bool = False, include_failed: bool = False,timeout: Optional[int] = None):
         """Execute the loop."""
         loop_model = self.session.get(LoopModel, self.loop_id)
         if not loop_model:
             raise ValueError(f"Loop {self.loop_id} not found")
 
+        statuses = [ItemStatus.PENDING] + ([ItemStatus.FAILED] if include_failed else [])
         pending_items = [
-            item for item in loop_model.items if item.status == ItemStatus.PENDING
+            item for item in loop_model.items if item.status in statuses
         ]
 
         if not pending_items:
